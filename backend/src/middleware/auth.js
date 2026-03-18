@@ -1,3 +1,4 @@
+// This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys.
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'smartpark-secret-key-change-in-prod';

@@ -1,3 +1,4 @@
+// This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys.
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';

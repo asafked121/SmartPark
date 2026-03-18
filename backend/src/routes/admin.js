@@ -1,3 +1,4 @@
+// This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys.
 const express = require('express');
 const pool = require('../db');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');

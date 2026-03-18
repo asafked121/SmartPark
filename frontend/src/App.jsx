@@ -1,3 +1,4 @@
+// This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys.
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
