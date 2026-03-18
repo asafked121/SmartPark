@@ -50,6 +50,10 @@ router.get('/revenue', async (req, res) => {
 router.get('/reservations', async (req, res) => {
   try {
     const { status, lot_id } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 100));
+    const offset = (page - 1) * limit;
+
     let query = `
       SELECT r.*, u.email, v.license_plate, v.make, v.model,
         pl.name AS lot_name, p.amount, p.payment_status, p.payment_id
@@ -70,7 +74,9 @@ router.get('/reservations', async (req, res) => {
       query += ` AND r.lot_id = $${i++}`;
       params.push(parseInt(lot_id));
     }
-    query += ` ORDER BY r.start_time DESC`;
+    query += ` ORDER BY r.start_time DESC LIMIT $${i++} OFFSET $${i++}`;
+    params.push(limit, offset);
+
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
