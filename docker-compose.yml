@@ -3,9 +3,9 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_DB: smartpark
-      POSTGRES_USER: smartpark
-      POSTGRES_PASSWORD: smartpark123
+      POSTGRES_DB: ${POSTGRES_DB:-smartpark}
+      POSTGRES_USER: ${POSTGRES_USER:-smartpark}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartpark123}
     ports:
       - "5432:5432"
     volumes:
@@ -24,10 +24,10 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: smartpark
-      DB_USER: smartpark
-      DB_PASSWORD: smartpark123
-      JWT_SECRET: smartpark-jwt-secret-2026
+      DB_NAME: ${POSTGRES_DB:-smartpark}
+      DB_USER: ${POSTGRES_USER:-smartpark}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-smartpark123}
+      JWT_SECRET: ${JWT_SECRET:-smartpark-dev-secret-change-in-prod}
       PORT: 4000
     depends_on:
       db:
@@ -36,9 +36,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:3000"
-    environment:
-      VITE_API_URL: http://localhost:4000
+      - "3000:80"
     depends_on:
       - backend
 

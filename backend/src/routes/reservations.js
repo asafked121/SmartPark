@@ -1,14 +1,19 @@
 // This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys.
 const express = require('express');
+const { body } = require('express-validator');
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const handleValidation = require('../middleware/validate');
+const { RATE_PER_HOUR } = require('../config');
 
 const router = express.Router();
 
-const RATE_PER_HOUR = 2.50;
-
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 100));
+    const offset = (page - 1) * limit;
+
     const result = await pool.query(`
       SELECT r.*, v.license_plate, v.make, v.model, pl.name AS lot_name,
         p.payment_id, p.amount, p.payment_status
@@ -18,7 +23,8 @@ router.get('/', authenticateToken, async (req, res) => {
       LEFT JOIN payments p ON r.reservation_id = p.reservation_id
       WHERE r.user_id = $1
       ORDER BY r.start_time DESC
-    `, [req.user.user_id]);
+      LIMIT $2 OFFSET $3
+    `, [req.user.user_id, limit, offset]);
 
     res.json(result.rows);
   } catch (err) {
@@ -27,18 +33,30 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, [
+  body('vehicle_id').isInt({ min: 1 }).withMessage('Valid vehicle is required'),
+  body('lot_id').isInt({ min: 1 }).withMessage('Valid lot is required'),
+  body('slot_number').notEmpty().withMessage('Slot number is required'),
+  body('start_time').isISO8601().withMessage('Valid start time is required'),
+  body('end_time').isISO8601().withMessage('Valid end time is required'),
+  handleValidation,
+], async (req, res) => {
   const client = await pool.connect();
   try {
     const { vehicle_id, lot_id, slot_number, start_time, end_time } = req.body;
 
-    if (!vehicle_id || !lot_id || !slot_number || !start_time || !end_time) {
-      return res.status(400).json({ error: 'All fields are required' });
+    const startDate = new Date(start_time);
+    const endDate = new Date(end_time);
+
+    if (startDate < new Date()) {
+      return res.status(400).json({ error: 'Start time must be in the future' });
+    }
+    if (endDate <= startDate) {
+      return res.status(400).json({ error: 'End time must be after start time' });
     }
 
     await client.query('BEGIN');
 
-    // Verify vehicle belongs to user
     const vehicleCheck = await client.query(
       'SELECT * FROM vehicles WHERE vehicle_id = $1 AND user_id = $2',
       [vehicle_id, req.user.user_id]
@@ -48,7 +66,6 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Vehicle does not belong to user' });
     }
 
-    // Check for overlapping active reservations on this slot
     const overlapCheck = await client.query(`
       SELECT reservation_id FROM reservations
       WHERE lot_id = $1 AND slot_number = $2 AND status = 'active'
@@ -60,7 +77,6 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(409).json({ error: 'Slot is already reserved for this time period' });
     }
 
-    // Create reservation
     const reservationResult = await client.query(`
       INSERT INTO reservations (user_id, vehicle_id, lot_id, slot_number, start_time, end_time, status)
       VALUES ($1, $2, $3, $4, $5, $6, 'active')
@@ -69,13 +85,11 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const reservation = reservationResult.rows[0];
 
-    // Calculate fee
     const hours = Math.ceil(
-      (new Date(end_time) - new Date(start_time)) / (1000 * 60 * 60)
+      (endDate - startDate) / (1000 * 60 * 60)
     );
     const amount = (hours * RATE_PER_HOUR).toFixed(2);
 
-    // Create pending payment
     const paymentResult = await client.query(`
       INSERT INTO payments (reservation_id, amount, payment_status)
       VALUES ($1, $2, 'pending')

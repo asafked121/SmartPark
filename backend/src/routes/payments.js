@@ -7,6 +7,10 @@ const router = express.Router();
 
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 100));
+    const offset = (page - 1) * limit;
+
     const result = await pool.query(`
       SELECT p.*, r.lot_id, r.slot_number, r.start_time, r.end_time,
         pl.name AS lot_name
@@ -15,7 +19,8 @@ router.get('/', authenticateToken, async (req, res) => {
       JOIN parking_lots pl ON r.lot_id = pl.lot_id
       WHERE r.user_id = $1
       ORDER BY p.payment_date DESC
-    `, [req.user.user_id]);
+      LIMIT $2 OFFSET $3
+    `, [req.user.user_id, limit, offset]);
 
     res.json(result.rows);
   } catch (err) {
@@ -39,7 +44,7 @@ router.patch('/:paymentId/pay', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Pending payment not found' });
     }
 
-    res.json({ message: 'Payment processed', payment: result.rows[0] });
+    res.json({ message: 'Payment processed (mock)', payment: result.rows[0] });
   } catch (err) {
     console.error('Process payment error:', err);
     res.status(500).json({ error: 'Internal server error' });

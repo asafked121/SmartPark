@@ -2,24 +2,29 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { body } = require('express-validator');
 const pool = require('../db');
 const { JWT_SECRET, authenticateToken } = require('../middleware/auth');
+const handleValidation = require('../middleware/validate');
 
 const router = express.Router();
 
-router.post('/register', async (req, res) => {
+router.post('/register', [
+  body('email')
+    .isEmail().withMessage('A valid email is required')
+    .normalizeEmail(),
+  body('password')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+    .matches(/\d/).withMessage('Password must contain at least one number'),
+  handleValidation,
+], async (req, res) => {
   try {
-    const { email, password, role } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    const userRole = role === 'admin' ? 'admin' : 'driver';
+    const { email, password } = req.body;
     const password_hash = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
       'INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING user_id, email, role, created_at',
-      [email, password_hash, userRole]
+      [email, password_hash, 'driver']
     );
 
     const user = result.rows[0];
@@ -39,12 +44,13 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', [
+  body('email').isEmail().withMessage('A valid email is required').normalizeEmail(),
+  body('password').notEmpty().withMessage('Password is required'),
+  handleValidation,
+], async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
 
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (result.rows.length === 0) {

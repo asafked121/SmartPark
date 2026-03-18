@@ -26,9 +26,12 @@ export const api = {
   // Auth
   login: (email, password) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  register: (email, password, role) =>
-    request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, role }) }),
+  register: (email, password) =>
+    request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
   getMe: () => request('/auth/me'),
+
+  // Config
+  getConfig: () => request('/config'),
 
   // Vehicles
   getVehicles: () => request('/vehicles'),
