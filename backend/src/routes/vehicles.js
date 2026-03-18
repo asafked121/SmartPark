@@ -1,6 +1,8 @@
 const express = require('express');
+const { body } = require('express-validator');
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const handleValidation = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -17,12 +19,20 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, [
+  body('license_plate')
+    .trim().notEmpty().withMessage('License plate is required')
+    .isLength({ max: 20 }).withMessage('License plate is too long'),
+  body('make')
+    .trim().notEmpty().withMessage('Make is required')
+    .isLength({ max: 50 }).withMessage('Make is too long'),
+  body('model')
+    .trim().notEmpty().withMessage('Model is required')
+    .isLength({ max: 50 }).withMessage('Model is too long'),
+  handleValidation,
+], async (req, res) => {
   try {
     const { license_plate, make, model } = req.body;
-    if (!license_plate || !make || !model) {
-      return res.status(400).json({ error: 'License plate, make, and model are required' });
-    }
 
     const result = await pool.query(
       'INSERT INTO vehicles (user_id, license_plate, make, model) VALUES ($1, $2, $3, $4) RETURNING *',
