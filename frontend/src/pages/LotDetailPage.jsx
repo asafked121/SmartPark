@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
+import ConfirmModal from '../components/ConfirmModal';
 
 function formatDateTime(d) {
   const date = new Date(d);
@@ -19,6 +20,7 @@ export default function LotDetailPage() {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [ratePerHour, setRatePerHour] = useState(2.50);
 
   const now = new Date();
   const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
@@ -30,6 +32,7 @@ export default function LotDetailPage() {
   const [reserving, setReserving] = useState(false);
   const [reserveError, setReserveError] = useState('');
   const [reserveSuccess, setReserveSuccess] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     const startISO = new Date(startTime).toISOString();
@@ -38,11 +41,13 @@ export default function LotDetailPage() {
       api.getLot(lotId),
       api.getSlots(lotId, startISO, endISO),
       api.getVehicles(),
+      api.getConfig(),
     ])
-      .then(([lotData, slotsData, vehiclesData]) => {
+      .then(([lotData, slotsData, vehiclesData, config]) => {
         setLot(lotData);
         setSlots(slotsData);
         setVehicles(vehiclesData);
+        if (config.rate_per_hour) setRatePerHour(config.rate_per_hour);
         if (vehiclesData.length > 0) setSelectedVehicle(vehiclesData[0].vehicle_id);
       })
       .catch((err) => setError(err.message))
@@ -70,6 +75,7 @@ export default function LotDetailPage() {
   };
 
   const handleReserve = async () => {
+    setConfirmOpen(false);
     if (!selectedSlot || !selectedVehicle) return;
     setReserving(true);
     setReserveError('');
@@ -93,6 +99,11 @@ export default function LotDetailPage() {
     }
   };
 
+  const estimatedCost = () => {
+    const hours = Math.ceil((new Date(endTime) - new Date(startTime)) / (1000 * 60 * 60));
+    return (hours * ratePerHour).toFixed(2);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -109,6 +120,16 @@ export default function LotDetailPage() {
 
   return (
     <div>
+      <ConfirmModal
+        open={confirmOpen}
+        title="Confirm Reservation"
+        message={`Reserve slot ${selectedSlot} for $${estimatedCost()}? This will be charged at $${ratePerHour.toFixed(2)}/hr.`}
+        confirmLabel="Reserve"
+        variant="primary"
+        onConfirm={handleReserve}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
       <div className="mb-6">
         <Link to="/" className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center mb-2">
           <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -258,15 +279,17 @@ export default function LotDetailPage() {
                     {new Date(startTime).toLocaleString()} — {new Date(endTime).toLocaleString()}
                   </span>
                 </div>
+                <div className="flex justify-between mb-1">
+                  <span>Rate:</span>
+                  <span className="font-medium text-gray-900">${ratePerHour.toFixed(2)}/hr</span>
+                </div>
                 <div className="flex justify-between">
                   <span>Estimated Cost:</span>
-                  <span className="font-medium text-gray-900">
-                    ${(Math.ceil((new Date(endTime) - new Date(startTime)) / (1000 * 60 * 60)) * 2.50).toFixed(2)}
-                  </span>
+                  <span className="font-medium text-gray-900">${estimatedCost()}</span>
                 </div>
               </div>
               <button
-                onClick={handleReserve}
+                onClick={() => setConfirmOpen(true)}
                 disabled={reserving}
                 className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 transition-all disabled:opacity-50"
               >

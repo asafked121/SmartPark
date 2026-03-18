@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState([]);
@@ -9,6 +10,7 @@ export default function VehiclesPage() {
   const [formData, setFormData] = useState({ license_plate: '', make: '', model: '' });
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
     loadVehicles();
@@ -37,13 +39,16 @@ export default function VehiclesPage() {
     }
   };
 
-  const handleDelete = async (vehicleId) => {
-    if (!confirm('Are you sure you want to remove this vehicle?')) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const vehicleId = deleteTarget;
+    setDeleteTarget(null);
     try {
       await api.deleteVehicle(vehicleId);
       loadVehicles();
     } catch (err) {
-      alert(err.message);
+      setError(err.message);
+      setTimeout(() => setError(''), 5000);
     }
   };
 
@@ -57,6 +62,16 @@ export default function VehiclesPage() {
 
   return (
     <div>
+      <ConfirmModal
+        open={deleteTarget !== null}
+        title="Remove Vehicle"
+        message="Are you sure you want to remove this vehicle? Any future reservations using it may be affected."
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Vehicles</h1>
@@ -154,7 +169,7 @@ export default function VehiclesPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDelete(v.vehicle_id)}
+                  onClick={() => setDeleteTarget(v.vehicle_id)}
                   className="text-gray-400 hover:text-red-500 transition-colors p-1"
                   title="Remove vehicle"
                 >

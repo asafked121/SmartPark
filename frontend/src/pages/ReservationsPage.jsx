@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function ReservationsPage() {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
+  const [confirm, setConfirm] = useState({ open: false, type: null, id: null, label: '' });
 
   useEffect(() => {
     loadReservations();
@@ -18,26 +20,28 @@ export default function ReservationsPage() {
       .finally(() => setLoading(false));
   };
 
-  const handleCancel = async (reservationId) => {
-    if (!confirm('Are you sure you want to cancel this reservation?')) return;
-    setActionLoading(reservationId);
-    try {
-      await api.cancelReservation(reservationId);
-      loadReservations();
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setActionLoading(null);
-    }
+  const openConfirm = (type, id, label) => {
+    setConfirm({ open: true, type, id, label });
   };
 
-  const handlePay = async (paymentId) => {
-    setActionLoading(paymentId);
+  const closeConfirm = () => {
+    setConfirm({ open: false, type: null, id: null, label: '' });
+  };
+
+  const handleConfirmed = async () => {
+    const { type, id } = confirm;
+    closeConfirm();
+    setActionLoading(id);
     try {
-      await api.processPayment(paymentId);
+      if (type === 'cancel') {
+        await api.cancelReservation(id);
+      } else if (type === 'pay') {
+        await api.processPayment(id);
+      }
       loadReservations();
     } catch (err) {
-      alert(err.message);
+      setError(err.message);
+      setTimeout(() => setError(''), 5000);
     } finally {
       setActionLoading(null);
     }
@@ -65,6 +69,20 @@ export default function ReservationsPage() {
 
   return (
     <div>
+      <ConfirmModal
+        open={confirm.open}
+        title={confirm.type === 'cancel' ? 'Cancel Reservation' : 'Process Payment'}
+        message={
+          confirm.type === 'cancel'
+            ? `Are you sure you want to cancel this reservation? Any pending payment will be voided.`
+            : `Process mock payment of ${confirm.label}? (No real charge will occur.)`
+        }
+        confirmLabel={confirm.type === 'cancel' ? 'Cancel Reservation' : 'Pay Now'}
+        variant={confirm.type === 'cancel' ? 'danger' : 'success'}
+        onConfirm={handleConfirmed}
+        onCancel={closeConfirm}
+      />
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">My Reservations</h1>
         <p className="text-gray-500 mt-1">View and manage your parking reservations</p>
@@ -126,7 +144,7 @@ export default function ReservationsPage() {
                 <div className="flex space-x-2">
                   {r.status === 'active' && r.payment_status === 'pending' && (
                     <button
-                      onClick={() => handlePay(r.payment_id)}
+                      onClick={() => openConfirm('pay', r.payment_id, `$${parseFloat(r.amount).toFixed(2)}`)}
                       disabled={actionLoading !== null}
                       className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
                     >
@@ -135,7 +153,7 @@ export default function ReservationsPage() {
                   )}
                   {r.status === 'active' && (
                     <button
-                      onClick={() => handleCancel(r.reservation_id)}
+                      onClick={() => openConfirm('cancel', r.reservation_id, '')}
                       disabled={actionLoading !== null}
                       className="px-4 py-2 bg-red-50 text-red-600 text-sm rounded-lg font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
                     >

@@ -6,11 +6,16 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('driver');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  const passwordChecks = {
+    length: password.length >= 8,
+    number: /\d/.test(password),
+  };
+  const passwordValid = passwordChecks.length && passwordChecks.number;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,14 +26,14 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (!passwordValid) {
+      setError('Password does not meet the requirements');
       return;
     }
 
     setLoading(true);
     try {
-      await register(email, password, role);
+      await register(email, password);
       navigate('/');
     } catch (err) {
       setError(err.message);
@@ -76,9 +81,21 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-colors"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 required
               />
+              {password.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <div className={`text-xs flex items-center space-x-1 ${passwordChecks.length ? 'text-green-600' : 'text-gray-400'}`}>
+                    <span>{passwordChecks.length ? '\u2713' : '\u2022'}</span>
+                    <span>At least 8 characters</span>
+                  </div>
+                  <div className={`text-xs flex items-center space-x-1 ${passwordChecks.number ? 'text-green-600' : 'text-gray-400'}`}>
+                    <span>{passwordChecks.number ? '\u2713' : '\u2022'}</span>
+                    <span>Contains a number</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
@@ -90,17 +107,6 @@ export default function RegisterPage() {
                 placeholder="Repeat your password"
                 required
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-colors"
-              >
-                <option value="driver">Driver</option>
-                <option value="admin">Administrator</option>
-              </select>
             </div>
             <button
               type="submit"
