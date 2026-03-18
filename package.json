@@ -1,0 +1,9 @@
+{
+  "name": "smartpark",
+  "private": true,
+  "scripts": {
+    "test": "npm test --prefix backend && npm test --prefix frontend",
+    "test:backend": "npm test --prefix backend",
+    "test:frontend": "npm test --prefix frontend"
+  }
+}
