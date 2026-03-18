@@ -52,21 +52,17 @@ CREATE TABLE reservations (
     FOREIGN KEY (lot_id, slot_number) REFERENCES parking_slots(lot_id, slot_number)
 );
 
-CREATE TABLE availability (
-    lot_id      INT NOT NULL,
-    slot_number VARCHAR(10) NOT NULL,
-    date        DATE NOT NULL,
-    time_block  INT NOT NULL
-                CHECK (time_block BETWEEN 0 AND 96),
-    status      VARCHAR(20) NOT NULL
-                CHECK (status IN ('occupied', 'available')),
-    CONSTRAINT pk_availability PRIMARY KEY (lot_id, slot_number, date, time_block),
-    FOREIGN KEY (lot_id, slot_number) REFERENCES parking_slots(lot_id, slot_number)
-);
+-- Speeds up overlap checks used when creating reservations and querying availability
+CREATE INDEX idx_reservations_slot_time
+    ON reservations (lot_id, slot_number, start_time, end_time)
+    WHERE status = 'active';
+
+CREATE INDEX idx_reservations_user
+    ON reservations (user_id, start_time DESC);
 
 CREATE TABLE payments (
     payment_id     SERIAL PRIMARY KEY,
-    reservation_id INT NOT NULL,
+    reservation_id INT NOT NULL UNIQUE,
     amount         DECIMAL(10, 2) NOT NULL,
     payment_date   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     payment_status VARCHAR(20) NOT NULL
