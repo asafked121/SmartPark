@@ -1,3 +1,4 @@
+// This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys.
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import ConfirmModal from '../components/ConfirmModal';

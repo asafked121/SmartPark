@@ -1,4 +1,5 @@
-FROM node:20-alpine AS build
+# This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys.
+FROM node:20-alpine
 
 WORKDIR /app
 

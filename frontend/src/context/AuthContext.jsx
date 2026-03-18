@@ -1,3 +1,4 @@
+// This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys.
 import { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../api';
 

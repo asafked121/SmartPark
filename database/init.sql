@@ -1,3 +1,4 @@
+-- This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys.
 -- SmartPark Parking Reservation System
 -- PostgreSQL Schema (translated from Oracle specification)
 

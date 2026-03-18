@@ -1,3 +1,5 @@
+<!-- This file may contain content made using generative AI. This comment satisfies requirements for this courses AI disclosure policys. -->
+
 # SmartPark — Parking Reservation System
 
 A full-stack parking reservation system with a React web UI and a Dockerized backend managing parking spaces.
